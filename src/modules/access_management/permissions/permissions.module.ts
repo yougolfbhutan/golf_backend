@@ -1,0 +1,16 @@
+/* eslint-disable prettier/prettier */
+import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
+
+import { PermissionsService } from './permissions.service';
+import { PermissionsController } from './permissions.controller';
+import { Permission } from './entities/permission.entity';
+
+@Module({
+  imports: [
+    TypeOrmModule.forFeature([Permission]), // ✅ REQUIRED
+  ],
+  controllers: [PermissionsController],
+  providers: [PermissionsService],
+})
+export class PermissionsModule {}
