@@ -10,7 +10,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 
 const PUBLIC_ROUTES = [
-  { method: 'POST', path: '/booking' },
+  { method: 'POST', path: '/users' },
   { method: 'POST', path: '/users/login' },
   { method: 'POST', path: '/users/forgot-password' },
 ];
