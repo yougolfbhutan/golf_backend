@@ -57,4 +57,8 @@ export class CreateGolfSetDto {
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
   price?: number;
+
+  @IsOptional()
+  @IsIn(['Standard', 'Premium'])
+  tierName?: 'Standard' | 'Premium';
 }

@@ -35,6 +35,9 @@ export class GolfSet {
   @Column({ type: 'varchar', length: 5, nullable: true })
   handedness!: 'left' | 'right' | null;
 
+  @Column({ name: 'tiername', type: 'varchar', length: 50, nullable: true })
+  tierName!: 'Standard' | 'Premium' | null;
+
   @Column({ name: 'is_available', default: true })
   isAvailable!: boolean;
 

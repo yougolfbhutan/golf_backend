@@ -10,6 +10,21 @@ import {
 import { JwtService } from '@nestjs/jwt';
 
 const PUBLIC_ROUTES = [
+  {
+    method: 'GET',
+    path: '/golf-set',
+  },
+  {
+    method: 'POST',
+    path: '/golf-set',
+  },
+  { method: 'PATCH', path: '/golf-set/:id' },
+  { method: 'POST', path: '/glove' },
+  { method: 'GET', path: '/glove' },
+  { method: 'PATCH', path: '/ball' },
+  { method: 'POST', path: '/ball' },
+  { method: 'GET', path: '/ball' },
+
   { method: 'POST', path: '/users' },
   { method: 'POST', path: '/users/login' },
   { method: 'POST', path: '/users/forgot-password' },

@@ -47,6 +47,10 @@ export class CreateGloveDto {
   price?: number;
 
   @IsOptional()
+  @IsIn(['Standard', 'Premium'])
+  tierName?: 'Standard' | 'Premium';
+
+  @IsOptional()
   @IsString()
   @IsUppercase()
   @Length(3, 3)

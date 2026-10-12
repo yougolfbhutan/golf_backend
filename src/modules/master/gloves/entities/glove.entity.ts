@@ -50,6 +50,8 @@ export class Glove {
     transformer: decimalTransformer.DecimalTransformer,
   })
   price!: number;
+  @Column({ name: 'tiername', type: 'varchar', length: 50, nullable: true })
+  tierName!: 'Standard' | 'Premium' | null;
 
   @Column({ type: 'char', length: 3, default: 'BTN' })
   currency!: decimalTransformer.Currency;

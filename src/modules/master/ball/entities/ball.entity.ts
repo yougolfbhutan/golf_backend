@@ -23,4 +23,7 @@ export class Ball {
 
   @Column({ type: 'char', length: 3, default: 'BTN' })
   currency!: decimalTransformer.Currency;
+
+  @Column({ name: 'tiername', type: 'varchar', length: 50, nullable: true })
+  tierName!: 'Standard' | 'Premium' | null;
 }

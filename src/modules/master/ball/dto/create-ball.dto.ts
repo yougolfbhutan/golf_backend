@@ -27,4 +27,7 @@ export class CreateBallDto {
   @IsOptional()
   @IsIn(['BTN', 'USD'])
   currency?: 'BTN' | 'USD';
+  @IsOptional()
+  @IsIn(['Standard', 'Premium'])
+  tierName?: 'Standard' | 'Premium';
 }
