@@ -129,7 +129,6 @@ export class BookingService {
   if (phone || cid) {
     where.customer = {};
     if (phone) where.customer.phone_no = phone;
-    if (cid) where.customer.identification_no = cid;
   }
 
   const [data, total] = await this.bookingRepo.findAndCount({

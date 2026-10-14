@@ -136,7 +136,6 @@ export class UserService {
       sub: user.id,
       email: user.email,
       name: user.name,
-      identification_no: user.identification_no,
       is_verified: user.is_verified,
       is_active: user.is_active,
     };
