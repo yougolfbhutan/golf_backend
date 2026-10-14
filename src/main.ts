@@ -8,10 +8,19 @@ async function bootstrap() {
 
   app.use(cookieParser());
 
+  const allowedOrigins = [
+    'http://localhost:3000',
+    'https://www.yougolfbhutan.com',
+    'https://yougolfbhutan.com',
+    // Extra origins from Render env, comma-separated (optional)
+    ...(process.env.CORS_ORIGINS?.split(',').map((o) => o.trim()) ?? []),
+  ];
+
   app.enableCors({
-    // eslint-disable-next-line prettier/prettier
-    origin: "https://www.yougolfbhutan.com",   // your Next.js app
+    origin: allowedOrigins,
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   });
 
   await app.listen(process.env.PORT ?? 3000, '0.0.0.0');
