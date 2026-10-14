@@ -1,8 +1,13 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable prettier/prettier */
 import {
   BadRequestException,
   Body,
   Controller,
+  DefaultValuePipe,
   Delete,
   Get,
   HttpCode,
@@ -55,6 +60,28 @@ export class BookingController {
     }
   }
 
+  @Get('search')
+async findAllByIdentificationNo(
+  @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+  @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
+  @Query('status') status?: string,
+  @Query('phone_no') phone_no?: string,
+  @Query('identification_no') identification_no?: string,
+): Promise<ApiResponse<PaginatedResult<Booking>>> {
+  try {
+    const result = await this.bookingService.findAllByIdentificationNo(
+      page, limit, status, phone_no, identification_no,
+    );
+    return {
+      success: true,
+      message: 'Bookings fetched successfully',
+      data: result,
+    };
+  } catch (error) {
+    if (error instanceof HttpException) throw error;
+    throw new InternalServerErrorException('Failed to fetch bookings');
+  }
+}
   @Get(':id')
   async findOne(@Param('id', ParseIntPipe) id: number): Promise<ApiResponse<Booking>> {
     try {

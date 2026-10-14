@@ -89,13 +89,56 @@ export class BookingService {
 
     const [data, total] = await this.bookingRepo.findAndCount({
       where,
-      relations: { items: true },
+      relations: {  customer: true, golfCourse: true, golferCategory: true , items: { golfSet: true, glove: true, ball: true } },
       order: { teeDate: 'DESC', teeTime: 'DESC', id: 'DESC' },
       skip: (current - 1) * take,
       take,
     });
     return { data, total, page: current, limit: take, totalPages: Math.ceil(total / take) };
   }
+
+  async findAllByIdentificationNo(
+  page = 1,
+  limit = 20,
+  status?: string,
+  phone_no?: string,
+  identification_no?: string,
+): Promise<PaginatedResult<Booking>> {
+  if (status !== undefined && !BOOKING_STATUSES.includes(status as BookingStatus)) {
+    throw new BadRequestException(
+      `status must be one of: ${BOOKING_STATUSES.join(', ')}`,
+    );
+  }
+
+  const take = Math.min(Math.max(limit, 1), 100);
+  const current = Math.max(page, 1);
+
+  const where: FindOptionsWhere<Booking> = {};
+  if (status !== undefined) where.status = status as BookingStatus;
+
+  const phone = phone_no?.trim();
+  const cid = identification_no?.trim();
+  if (phone || cid) {
+    where.customer = {};
+    if (phone) where.customer.phone_no = phone;
+    if (cid) where.customer.identification_no = cid;
+  }
+
+  const [data, total] = await this.bookingRepo.findAndCount({
+    where,
+    relations: {
+      customer: true,
+      golfCourse: true,
+      golferCategory: true,
+      items: { golfSet: true, glove: true, ball: true },
+    },
+    order: { teeDate: 'DESC', teeTime: 'DESC', id: 'DESC' },
+    skip: (current - 1) * take,
+    take,
+  });
+
+  return { data, total, page: current, limit: take, totalPages: Math.ceil(total / take) };
+}
 
   async findOne(id: number): Promise<Booking> {
     const booking = await this.bookingRepo.findOne({

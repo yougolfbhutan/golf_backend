@@ -5,7 +5,7 @@ export class GolfCourse {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column({ length: 150 })
+  @Column({ length: 150, unique: true })
   name!: string;
 
   @Column({ type: 'text', nullable: true })
