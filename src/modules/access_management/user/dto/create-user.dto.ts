@@ -29,8 +29,7 @@ export class CreateUserDto {
     @IsString()
     phone_no!: string;
 
-    @IsString()
-    identification_no!: string;
+  
 
     @IsString()
     @MinLength(6)

@@ -9,7 +9,8 @@ async function bootstrap() {
   app.use(cookieParser());
 
   app.enableCors({
-    origin: process.env.FRONTEND_URL,
+    // eslint-disable-next-line prettier/prettier
+    origin: "https://www.yougolfbhutan.com",   // your Next.js app
     credentials: true,
   });
 

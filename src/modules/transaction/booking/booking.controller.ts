@@ -66,11 +66,10 @@ async findAllByIdentificationNo(
   @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
   @Query('status') status?: string,
   @Query('phone_no') phone_no?: string,
-  @Query('identification_no') identification_no?: string,
 ): Promise<ApiResponse<PaginatedResult<Booking>>> {
   try {
     const result = await this.bookingService.findAllByIdentificationNo(
-      page, limit, status, phone_no, identification_no,
+      page, limit, status, phone_no,
     );
     return {
       success: true,
