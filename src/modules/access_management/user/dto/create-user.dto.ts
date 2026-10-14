@@ -8,6 +8,7 @@ import {
     IsBoolean,
     IsArray,
     IsNotEmpty,
+    IsISO31661Alpha2,
 } from 'class-validator';
 export class LoginDto {
   @IsString()
@@ -46,6 +47,9 @@ export class CreateUserDto {
     @IsOptional()
     @IsArray()
     roles?: string[]; 
+
+    @IsISO31661Alpha2()
+  country_code!: string;
 
     @IsOptional()
     @IsArray()

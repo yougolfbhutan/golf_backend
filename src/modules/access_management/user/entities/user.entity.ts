@@ -1,14 +1,14 @@
 /* eslint-disable prettier/prettier */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 import {
-    Entity,
-    PrimaryGeneratedColumn,
-    Column,
-    CreateDateColumn,
-    UpdateDateColumn,
-    DeleteDateColumn,
-    JoinTable,
-    ManyToMany,
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  DeleteDateColumn,
+  JoinTable,
+  ManyToMany,
 } from 'typeorm';
 import { Exclude } from 'class-transformer';
 import { Permission } from '../../permissions/entities/permission.entity';
@@ -16,51 +16,51 @@ import { Role } from '../../roles/entities/role.entity';
 
 @Entity('users')
 export class User {
-    @PrimaryGeneratedColumn('uuid')
-    id!: string;
+  @PrimaryGeneratedColumn('uuid')
+  id!: string;
 
-    @Column()
-    name!: string;
+  @Column()
+  name!: string;
 
-    @Column({ unique: true })
-    email!: string;
+  @Column({ unique: true })
+  email!: string;
 
-    @Column({ unique: true })
-    phone_no!: string;
+  @Column({ unique: true })
+  phone_no!: string;
 
-    @Column({ unique: true })
-    identification_no!: string;
+  @Column({ length: 2, default: 'BT' })
+  country_code!: string; // ISO code, e.g. "BT"
 
-    @Column()
-    @Exclude() // 🔐 hide from API response
-    password!: string;
+  @Column()
+  @Exclude() // 🔐 hide from API response
+  password!: string;
 
-    @Column({ default: true })
-    is_active!: boolean;
+  @Column({ default: true })
+  is_active!: boolean;
 
-    @Column({ default: false })
-    is_verified!: boolean;
+  @Column({ default: false })
+  is_verified!: boolean;
 
-    @Column({ type: 'timestamp', nullable: true })
-    last_login!: Date;
+  @Column({ type: 'timestamp', nullable: true })
+  last_login!: Date;
 
-    @Column({ nullable: true })
-    refresh_token!: string; // 🔐 for JWT refresh
+  @Column({ nullable: true })
+  refresh_token!: string; // 🔐 for JWT refresh
 
-    @CreateDateColumn()
-    created_at!: Date;
+  @CreateDateColumn()
+  created_at!: Date;
 
-    @UpdateDateColumn()
-    updated_at!: Date;
+  @UpdateDateColumn()
+  updated_at!: Date;
 
-    @DeleteDateColumn()
-    deleted_at!: Date; // ✅ soft delete
+  @DeleteDateColumn()
+  deleted_at!: Date; // ✅ soft delete
 
-    @ManyToMany(() => Role, { eager: true })
-    @JoinTable()
-    roles!: Role[];
+  @ManyToMany(() => Role, { eager: true })
+  @JoinTable()
+  roles!: Role[];
 
-    @ManyToMany(() => Permission, { eager: true })
-    @JoinTable()
-    permissions!: Permission[];
+  @ManyToMany(() => Permission, { eager: true })
+  @JoinTable()
+  permissions!: Permission[];
 }

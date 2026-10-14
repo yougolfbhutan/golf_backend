@@ -18,6 +18,14 @@ const PUBLIC_ROUTES = [
     method: 'POST',
     path: '/golf-set',
   },
+  {
+    method: 'POST',
+    path: '/course',
+  },
+  {
+    method: 'POST',
+    path: '/booking',
+  },
   { method: 'PATCH', path: '/golf-set/:id' },
   { method: 'POST', path: '/glove' },
   { method: 'GET', path: '/glove' },
@@ -28,6 +36,7 @@ const PUBLIC_ROUTES = [
   { method: 'POST', path: '/users' },
   { method: 'POST', path: '/users/login' },
   { method: 'POST', path: '/users/forgot-password' },
+  { method: 'GET', path: '/golfer-category' },
 ];
 
 @Injectable()
