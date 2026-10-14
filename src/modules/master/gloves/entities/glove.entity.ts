@@ -16,7 +16,7 @@ export class Glove {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column({ length: 100 })
+  @Column({ length: 100, unique: true })
   name!: string;
 
   @Column({ name: 'audience_id', type: 'int', nullable: true })
