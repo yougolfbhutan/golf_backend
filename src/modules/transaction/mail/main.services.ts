@@ -98,6 +98,7 @@ export class MailService {
       { idempotencyKey: `booking-admin/${booking.id}` },
     );
 
+    
     if (error) throw new Error(`Resend error: ${error.name} – ${error.message}`);
     this.logger.log(`Admin email sent for booking ${booking.id} (${data?.id})`);
   }
