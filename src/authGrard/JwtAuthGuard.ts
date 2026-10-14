@@ -27,6 +27,7 @@ const PUBLIC_ROUTES = [
     path: '/booking',
   },
   { method: 'PATCH', path: '/golf-set/:id' },
+  { method: 'GET', path: '/golf-set' },
   { method: 'POST', path: '/glove' },
   { method: 'GET', path: '/glove' },
   { method: 'PATCH', path: '/ball' },
