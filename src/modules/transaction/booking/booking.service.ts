@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unnecessary-type-assertion */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable prettier/prettier */
@@ -5,6 +8,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -21,51 +25,73 @@ import { CreateBookingDto, CreateBookingItemDto } from './dto/create-booking.dto
 import { UpdateBookingDto } from './dto/update-booking.dto';
 import { BookingItem } from './entities/booking item.entity';
 import { Glove } from 'src/modules/master/gloves/entities/glove.entity';
+import { MailService } from '../mail/main.services';
 
 @Injectable()
 export class BookingService {
+    private readonly logger = new Logger(BookingService.name); // <-- add this
+
   constructor(
     @InjectRepository(Booking)
     private readonly bookingRepo: Repository<Booking>,
     private readonly dataSource: DataSource,
-  ) {}
+        private readonly mailService: MailService, // <-- add this
+
+  ) { }
 
   /**
    * Creates the booking and its rental lines in one transaction.
    * Prices come from the master tables, never from the client.
    * totalAmount currently covers rentals only.
    */
-  async create(dto: CreateBookingDto): Promise<Booking> {
-    this.assertNotInPast(dto.teeDate);
+async create(dto: CreateBookingDto): Promise<Booking> {
+  this.assertNotInPast(dto.teeDate);
 
-    return this.dataSource.transaction(async (manager) => {
-      const items: BookingItem[] = [];
-      let total = 0;
-      for (const line of dto.items ?? []) {
-        const item = await this.buildItem(manager, line);
-        total += item.unitPrice * item.quantity;
-        items.push(item);
-      }
+  const booking = await this.dataSource.transaction(async (manager) => {
+    const items: BookingItem[] = [];
+    let total = 0;
+    for (const line of dto.items ?? []) {
+      const item = await this.buildItem(manager, line);
+      total += item.unitPrice * item.quantity;
+      items.push(item);
+    }
 
-      const booking = manager.create(Booking, {
-        customerId: dto.customerId,
-        golfCourseId: dto.golfCourseId,
-        golferCategoryId: dto.golferCategoryId,
-        teeDate: dto.teeDate,
-        teeTime: dto.teeTime,
-        numberOfGolfers: dto.numberOfGolfers,
-        notes: dto.notes ?? null,
-        totalAmount: Math.round(total * 100) / 100,
-        items,
-      });
-      const saved = await manager.save(booking);
-
-      return manager.findOneOrFail(Booking, {
-        where: { id: saved.id },
-        relations: { items: true },
-      });
+    const created = manager.create(Booking, {
+      customerId: dto.customerId,
+      golfCourseId: dto.golfCourseId,
+      golferCategoryId: dto.golferCategoryId,
+      teeDate: dto.teeDate,
+      teeTime: dto.teeTime,
+      numberOfGolfers: dto.numberOfGolfers,
+      notes: dto.notes ?? null,
+      totalAmount: Math.round(total * 100) / 100,
+      items,
     });
-  }
+    const saved = await manager.save(created);
+
+    // No mail call in here.
+    return manager.findOneOrFail(Booking, {
+      where: { id: saved.id },
+      relations: {
+        items: { golfSet: true, glove: true, ball: true },
+        customer: true,
+        golfCourse: true,
+      },
+    });
+  });
+
+  // The transaction has committed. A mail failure must not fail the booking.
+  void this.mailService
+    .sendBookingEmails(booking)
+    .catch((e: unknown) =>
+      this.logger.error(
+        `Confirmation email failed for booking ${booking.id}`,
+        e instanceof Error ? e.stack : undefined,
+      ),
+    );
+
+  return booking;
+}
 
   // Paginated: GET /booking?page=1&limit=20&customerId=3&status=pending
   async findAll(
@@ -89,7 +115,12 @@ export class BookingService {
 
     const [data, total] = await this.bookingRepo.findAndCount({
       where,
-      relations: {  customer: true, golfCourse: true, golferCategory: true , items: { golfSet: true, glove: true, ball: true } },
+      relations: {
+        customer: true,
+        golfCourse: true,
+        golferCategory: true,
+        items: { golfSet: true, glove: true, ball: true },
+      },
       order: { teeDate: 'DESC', teeTime: 'DESC', id: 'DESC' },
       skip: (current - 1) * take,
       take,
@@ -98,46 +129,44 @@ export class BookingService {
   }
 
   async findAllByIdentificationNo(
-  page = 1,
-  limit = 20,
-  status?: string,
-  phone_no?: string,
-  identification_no?: string,
-): Promise<PaginatedResult<Booking>> {
-  if (status !== undefined && !BOOKING_STATUSES.includes(status as BookingStatus)) {
-    throw new BadRequestException(
-      `status must be one of: ${BOOKING_STATUSES.join(', ')}`,
-    );
+    page = 1,
+    limit = 20,
+    status?: string,
+    phone_no?: string,
+  ): Promise<PaginatedResult<Booking>> {
+    if (status !== undefined && !BOOKING_STATUSES.includes(status as BookingStatus)) {
+      throw new BadRequestException(
+        `status must be one of: ${BOOKING_STATUSES.join(', ')}`,
+      );
+    }
+
+    const take = Math.min(Math.max(limit, 1), 100);
+    const current = Math.max(page, 1);
+
+    const where: FindOptionsWhere<Booking> = {};
+    if (status !== undefined) where.status = status as BookingStatus;
+
+    const phone = phone_no?.trim();
+    if (phone) {
+      where.customer = {};
+      if (phone) where.customer.phone_no = phone;
+    }
+
+    const [data, total] = await this.bookingRepo.findAndCount({
+      where,
+      relations: {
+        customer: true,
+        golfCourse: true,
+        golferCategory: true,
+        items: { golfSet: true, glove: true, ball: true },
+      },
+      order: { teeDate: 'DESC', teeTime: 'DESC', id: 'DESC' },
+      skip: (current - 1) * take,
+      take,
+    });
+
+    return { data, total, page: current, limit: take, totalPages: Math.ceil(total / take) };
   }
-
-  const take = Math.min(Math.max(limit, 1), 100);
-  const current = Math.max(page, 1);
-
-  const where: FindOptionsWhere<Booking> = {};
-  if (status !== undefined) where.status = status as BookingStatus;
-
-  const phone = phone_no?.trim();
-  const cid = identification_no?.trim();
-  if (phone || cid) {
-    where.customer = {};
-    if (phone) where.customer.phone_no = phone;
-  }
-
-  const [data, total] = await this.bookingRepo.findAndCount({
-    where,
-    relations: {
-      customer: true,
-      golfCourse: true,
-      golferCategory: true,
-      items: { golfSet: true, glove: true, ball: true },
-    },
-    order: { teeDate: 'DESC', teeTime: 'DESC', id: 'DESC' },
-    skip: (current - 1) * take,
-    take,
-  });
-
-  return { data, total, page: current, limit: take, totalPages: Math.ceil(total / take) };
-}
 
   async findOne(id: number): Promise<Booking> {
     const booking = await this.bookingRepo.findOne({
@@ -217,7 +246,7 @@ export class BookingService {
     }
 
     if (!product) throw new NotFoundException(`${label} not found`);
-   
+
 
     const item = new BookingItem();
     item.golfSetId = line.golfSetId ?? null;

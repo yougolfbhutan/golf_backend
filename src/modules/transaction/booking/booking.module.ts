@@ -8,11 +8,12 @@ import { BookingService } from './booking.service';
 import { Booking } from './entities/booking.entity';
 import { Glove } from 'src/modules/master/gloves/entities/glove.entity';
 import { BookingItem } from './entities/booking item.entity';
+import { MailService } from '../mail/main.services';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Booking, BookingItem, GolfSet, Glove, Ball])],
   controllers: [BookingController],
-  providers: [BookingService],
+  providers: [BookingService, MailService],
   // Collection (payment) and Review modules import BookingModule to reach the service.
   exports: [BookingService],
 })
