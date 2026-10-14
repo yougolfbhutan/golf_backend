@@ -18,14 +18,6 @@ const PUBLIC_ROUTES = [
     method: 'POST',
     path: '/form/submit',
   },
-  {
-    method: 'POST',
-    path: '/course',
-  },
-  {
-    method: 'POST',
-    path: '/booking',
-  },
   { method: 'PATCH', path: '/golf-set/:id' },
   { method: 'GET', path: '/golf-set' },
   { method: 'POST', path: '/glove' },
