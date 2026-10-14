@@ -12,11 +12,11 @@ import { JwtService } from '@nestjs/jwt';
 const PUBLIC_ROUTES = [
   {
     method: 'GET',
-    path: '/golf-set',
+    path: '/booking/search',
   },
   {
     method: 'POST',
-    path: '/golf-set',
+    path: '/form/submit',
   },
   {
     method: 'POST',

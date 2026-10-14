@@ -1,7 +1,7 @@
 /* eslint-disable prettier/prettier */
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindOptionsWhere, Repository } from 'typeorm';
+import { FindOptionsWhere, QueryFailedError, Repository } from 'typeorm';
 import { PaginatedResult } from 'src/common/api-response';
 import { Glove } from './entities/glove.entity';
 import { CreateGloveDto } from './dto/create-glove.dto';
@@ -18,25 +18,48 @@ export class GlovesService {
     private readonly cloudinaryService: CloudinaryService,
   ) {}
 
-  async create(createGloveDto: CreateGloveDto, image?: Express.Multer.File): Promise<Glove> {
-    const uploaded = image
-      ? await this.cloudinaryService.uploadImage(image, IMAGE_FOLDER)
-      : null;
-
-    let saved: Glove;
-    try {
-      const glove = this.gloveRepo.create({
-        ...this.toEntityFields(createGloveDto),
-        imageUrl: uploaded?.url ?? null,
-      });
-      saved = await this.gloveRepo.save(glove);
-    } catch (e) {
-      // Don't leave an orphaned image in Cloudinary if the DB save fails.
-      if (uploaded) await this.cloudinaryService.deleteByUrl(uploaded.url);
-      throw e;
-    }
-    return this.findOne(saved.id);
+async create(
+  createGloveDto: CreateGloveDto,
+  image?: Express.Multer.File,
+): Promise<Glove> {
+  // Fail fast before touching Cloudinary
+  const exists = await this.gloveRepo.exists({
+    where: { name: createGloveDto.name },
+  });
+  if (exists) {
+    throw new ConflictException(
+      `A glove named "${createGloveDto.name}" already exists`,
+    );
   }
+
+  const uploaded = image
+    ? await this.cloudinaryService.uploadImage(image, IMAGE_FOLDER)
+    : null;
+
+  let saved: Glove;
+  try {
+    const glove = this.gloveRepo.create({
+      ...this.toEntityFields(createGloveDto),
+      imageUrl: uploaded?.url ?? null,
+    });
+    saved = await this.gloveRepo.save(glove);
+  } catch (e) {
+    // Don't leave an orphaned image in Cloudinary if the DB save fails.
+    if (uploaded) await this.cloudinaryService.deleteByUrl(uploaded.url);
+
+    // Race condition: two requests passed the exists() check at once
+    if (
+      e instanceof QueryFailedError &&
+      (e as QueryFailedError & { code?: string }).code === '23505'
+    ) {
+      throw new ConflictException(
+        `A glove named "${createGloveDto.name}" already exists`,
+      );
+    }
+    throw e;
+  }
+  return this.findOne(saved.id);
+}
 
   // Paginated: GET /glove?page=1&limit=20&audienceId=2
   async findAll(page = 1, limit = 20, audienceId?: number): Promise<PaginatedResult<Glove>> {

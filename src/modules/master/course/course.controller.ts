@@ -1,13 +1,18 @@
+/* eslint-disable prettier/prettier */
 import {
   Body,
   Controller,
   Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   ParseIntPipe,
   Patch,
   Post,
   Query,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
 
 import { CourseService } from './course.service';
@@ -15,20 +20,25 @@ import { CreateCourseDto } from './dto/create-course.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
 import { GolfCourse } from './entities/course.entity';
 import { ApiResponse, ok } from 'src/common/api-response';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { optionalImagePipe } from '../image-file.pipe';
 
 @Controller('course')
 export class CourseController {
-  constructor(private readonly courseService: CourseService) {}
+  constructor(private readonly courseService: CourseService) { }
 
   // ==============================
   // CREATE COURSE
   // ==============================
   @Post()
+  @HttpCode(HttpStatus.CREATED)
+  @UseInterceptors(FileInterceptor('image'))
   async create(
     @Body() createCourseDto: CreateCourseDto,
+    @UploadedFile(optionalImagePipe) image?: Express.Multer.File,
   ): Promise<ApiResponse<GolfCourse>> {
     try {
-      const result = await this.courseService.create(createCourseDto);
+      const result = await this.courseService.create(createCourseDto, image);
 
       return ok(result, 'Course created successfully');
     } catch (error) {

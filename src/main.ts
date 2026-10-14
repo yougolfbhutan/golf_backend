@@ -1,14 +1,18 @@
+/* eslint-disable @typescript-eslint/no-unsafe-call */
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  app.use(cookieParser());
+
   app.enableCors({
-    // eslint-disable-next-line prettier/prettier
-    origin: "http://localhost:3000",   // your Next.js app
+    origin: process.env.FRONTEND_URL,
     credentials: true,
   });
-  await app.listen(process.env.PORT ?? 3000);
+
+  await app.listen(process.env.PORT ?? 3000, '0.0.0.0');
 }
 bootstrap();

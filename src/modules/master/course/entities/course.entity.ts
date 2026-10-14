@@ -5,7 +5,7 @@ export class GolfCourse {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column({ length: 150 })
+  @Column({ length: 150, unique: true })
   name!: string;
 
   @Column({ type: 'text', nullable: true })
@@ -19,4 +19,7 @@ export class GolfCourse {
 
   @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
   prices!: number | null;
+
+  @Column({ name: 'image_url', type: 'text', nullable: true })
+  imageUrl!: string | null;
 }
