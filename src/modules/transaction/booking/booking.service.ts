@@ -89,7 +89,15 @@ export class BookingService {
 
     const [data, total] = await this.bookingRepo.findAndCount({
       where,
-      relations: {  customer: true, golfCourse: true, golferCategory: true , items: { golfSet: true, glove: true, ball: true } },
+      relations: [
+        'customer',
+        'golfCourse',
+        'golferCategory',
+        'items',
+        'items.golfSet',
+        'items.glove',
+        'items.ball',
+      ],
       order: { teeDate: 'DESC', teeTime: 'DESC', id: 'DESC' },
       skip: (current - 1) * take,
       take,

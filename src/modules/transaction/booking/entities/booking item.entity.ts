@@ -22,6 +22,7 @@ import { Glove } from 'src/modules/master/gloves/entities/glove.entity';
 @Check('"unit_price" >= 0')
 @Check('num_nonnulls("golf_set_id", "glove_id", "ball_id") = 1')
 export class BookingItem {
+  [x: string]: string;
   @PrimaryGeneratedColumn()
   id!: number;
 
