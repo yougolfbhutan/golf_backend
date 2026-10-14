@@ -6,7 +6,7 @@ async function bootstrap() {
 
   app.enableCors({
     // eslint-disable-next-line prettier/prettier
-    origin: "http://localhost:3000",   // your Next.js app
+    origin: "https://www.yougolfbhutan.com",   // your Next.js app
     credentials: true,
   });
   await app.listen(process.env.PORT ?? 3000);
