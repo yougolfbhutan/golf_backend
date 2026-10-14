@@ -52,31 +52,37 @@ export class MailService {
     }
   }
 
-  private async sendToCustomer(booking: Booking): Promise<void> {
-    const to = booking.customer?.email;
-    if (!to) {
-      this.logger.warn(`Booking ${booking.id} has no customer email, skipping customer email`);
-      return;
-    }
-
-    const { subject, html, text } = buildBookingConfirmationEmail(booking);
-    const { data, error } = await this.resend.emails.send(
-      {
-        from: this.from,
-        to,
-        subject,
-        html,
-        text,
-        replyTo: this.replyTo,
-        tags: [{ name: 'type', value: 'booking_confirmation' }],
-      },
-      { idempotencyKey: `booking-confirmation/${booking.id}` },
+private async sendToCustomer(booking: Booking): Promise<void> {
+  const to = booking.customer?.email;
+  if (!to) {
+    this.logger.warn(
+      `Booking ${booking.id} has no customer email, skipping customer email`,
     );
-
-    if (error) throw new Error(`Resend error: ${error.name} – ${error.message}`);
-    this.logger.log(`Customer email sent for booking ${booking.id} (${data?.id})`);
+    return;
   }
 
+  const { subject, html, text, attachments } =
+    await buildBookingConfirmationEmail(booking);
+
+  const { data, error } = await this.resend.emails.send(
+    {
+      from: this.from,
+      to,
+      subject,
+      html,
+      text,
+      replyTo: this.replyTo,
+      attachments,
+      tags: [{ name: 'type', value: 'booking_confirmation' }],
+    },
+    { idempotencyKey: `booking-confirmation/${booking.id}` },
+  );
+
+  if (error) {
+    throw new Error(`Resend error: ${error.name} – ${error.message}`);
+  }
+  this.logger.log(`Customer email sent for booking ${booking.id} (${data?.id})`);
+}
   private async sendToAdmins(booking: Booking): Promise<void> {
     if (this.adminEmails.length === 0) {
       this.logger.warn('ADMIN_NOTIFY_EMAIL is not set, skipping admin email');

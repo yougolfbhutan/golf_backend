@@ -4,7 +4,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { Booking } from '../booking/entities/booking.entity';
 import {
-  BRAND, COLORS, BuiltEmail, escapeHtml, formatDate, formatTime, itemName, money,
+  BRAND, COLORS, BuiltEmail, escapeHtml, formatDate, formatTime,
 } from './email.helpers';
 
 export function buildAdminBookingEmail(booking: Booking): BuiltEmail {
@@ -12,7 +12,6 @@ export function buildAdminBookingEmail(booking: Booking): BuiltEmail {
   const courseName = booking.golfCourse?.name ?? 'Golf course';
   const date = formatDate(booking.teeDate);
   const time = formatTime(booking.teeTime);
-  const items = booking.items ?? [];
 
   const customerName = c?.name?.trim() || 'Unknown customer';
   const email = c?.email ?? '-';
@@ -26,14 +25,6 @@ export function buildAdminBookingEmail(booking: Booking): BuiltEmail {
       <td style="padding:6px 0;color:${COLORS.text};font-size:14px;font-weight:600;vertical-align:top;">${escapeHtml(value)}</td>
     </tr>`;
 
-  const itemList = items.length
-    ? items
-        .map(
-          (i) =>
-            `<li style="margin:2px 0;">${escapeHtml(itemName(i))} × ${i.quantity} – ${escapeHtml(money(booking.currency, Number(i.unitPrice) * i.quantity))}</li>`,
-        )
-        .join('')
-    : '';
 
   const heading = (t: string): string =>
     `<p style="margin:24px 0 4px;font-size:13px;letter-spacing:1px;text-transform:uppercase;color:${COLORS.accent};font-weight:700;">${t}</p>`;
@@ -64,13 +55,11 @@ export function buildAdminBookingEmail(booking: Booking): BuiltEmail {
             ${row('Tee time', time)}
             ${row('Golfers', String(booking.numberOfGolfers))}
             ${row('Status', booking.status)}
-            ${row('Rental total', money(booking.currency, booking.totalAmount))}
           </table>
 
-          ${itemList ? `${heading('Rentals')}<ul style="margin:0;padding-left:18px;font-size:14px;color:${COLORS.text};">${itemList}</ul>` : ''}
           ${booking.notes ? `${heading('Customer notes')}<p style="margin:0;font-size:14px;line-height:1.5;color:${COLORS.text};">${escapeHtml(booking.notes)}</p>` : ''}
 
-          <p style="margin:24px 0 0;font-size:13px;color:${COLORS.muted};">Reply to this email to contact the customer directly.</p>
+          <p style="margin:24px 0 0;font-size:13px;color:${COLORS.muted};">Reply to this email ${email} to contact the customer directly.</p>
         </td></tr>
       </table>
     </td></tr>
@@ -90,11 +79,7 @@ export function buildAdminBookingEmail(booking: Booking): BuiltEmail {
     `Date:         ${date}`,
     `Tee time:     ${time}`,
     `Golfers:      ${booking.numberOfGolfers}`,
-    `Status:       ${booking.status}`,
-    `Rental total: ${money(booking.currency, booking.totalAmount)}`,
-    ...(items.length
-      ? ['', 'RENTALS', ...items.map((i) => `- ${itemName(i)} x ${i.quantity}`)]
-      : []),
+    `Status:       ${booking.status}`,  
     ...(booking.notes ? ['', `NOTES: ${booking.notes}`] : []),
   ].join('\n');
 

@@ -1,8 +1,11 @@
+/* eslint-disable @typescript-eslint/no-unsafe-return */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 // mail/templates/booking-confirmation.template.ts
+import { createHmac } from 'crypto';
+import * as QRCode from 'qrcode';
 import { Booking } from '../booking/entities/booking.entity';
 import {
   BRAND,
@@ -12,17 +15,79 @@ import {
   escapeHtml,
   formatDate,
   formatTime,
-  itemName,
-  money,
 } from './email.helpers';
 
-export function buildBookingConfirmationEmail(booking: Booking): BuiltEmail {
+const QR_CID = 'booking-qr';
+
+export interface BuiltEmailWithAttachments extends BuiltEmail {
+  attachments?: {
+    filename: string;
+    content: Buffer;
+    contentType: string;
+    contentId: string;
+  }[];
+}
+
+// Gmail/Outlook block base64 images, so the QR is sent as an inline (cid:) attachment.
+async function generateQr(booking: Booking): Promise<Buffer | null> {
+  try {
+    const c = booking.customer;
+
+    const data = {
+      v: 1,
+      ref: booking.id,
+      status: booking.status,
+      customer: {
+        id: booking.customerId,
+        name: c?.name ?? null,
+        email: c?.email ?? null,
+        phone: c?.phone_no ?? null,
+      },
+      course: {
+        id: booking.golfCourseId,
+        name: booking.golfCourse?.name ?? null,
+      },
+      categoryId: booking.golferCategoryId,
+      teeDate: booking.teeDate,
+      teeTime: booking.teeTime.slice(0, 5),
+      golfers: booking.numberOfGolfers,
+      notes: booking.notes ? booking.notes.slice(0, 200) : null,
+    };
+
+    const json = JSON.stringify(data);
+
+    // Optional tamper-proofing: staff can verify the signature server-side.
+    const secret = process.env.QR_SECRET;
+    const payload = secret
+      ? JSON.stringify({
+          ...data,
+          sig: createHmac('sha256', secret)
+            .update(json)
+            .digest('hex')
+            .slice(0, 16),
+        })
+      : json;
+
+    return await QRCode.toBuffer(payload, {
+      type: 'png',
+      width: 640, // more data means a denser code, so render it larger
+      margin: 2,
+      errorCorrectionLevel: 'M',
+    });
+  } catch {
+    return null; // send the email without the QR rather than not at all
+  }
+}
+
+export async function buildBookingConfirmationEmail(
+  booking: Booking,
+): Promise<BuiltEmailWithAttachments> {
   const customerName = booking.customer?.name?.trim() || 'there';
   const courseName = booking.golfCourse?.name ?? 'Golf course';
   const date = formatDate(booking.teeDate);
   const time = formatTime(booking.teeTime);
   const ref = `#${booking.id}`;
-  const items = booking.items ?? [];
+  const qr = await generateQr(booking);
 
   const subject = `Booking ${ref} confirmed – ${courseName}, ${date}`;
   const preheader = `${courseName} on ${date} at ${time} for ${booking.numberOfGolfers} golfer(s).`;
@@ -36,37 +101,24 @@ export function buildBookingConfirmationEmail(booking: Booking): BuiltEmail {
       <td style="padding:8px 0;color:${COLORS.text};font-size:14px;font-weight:600;vertical-align:top;">${escapeHtml(value)}</td>
     </tr>`;
 
-  const itemRows = items
-    .map((i) => {
-      const lineTotal = Number(i.unitPrice) * i.quantity;
-      return `
-    <tr>
-      <td style="padding:10px 0;border-bottom:1px solid ${COLORS.border};color:${COLORS.text};font-size:14px;">${escapeHtml(itemName(i))}</td>
-      <td style="padding:10px 0;border-bottom:1px solid ${COLORS.border};color:${COLORS.muted};font-size:14px;text-align:center;">× ${i.quantity}</td>
-      <td style="padding:10px 0;border-bottom:1px solid ${COLORS.border};color:${COLORS.text};font-size:14px;text-align:right;">${escapeHtml(money(booking.currency, lineTotal))}</td>
-    </tr>`;
-    })
-    .join('');
-
-  const rentalsSection = items.length
-    ? `
-        <tr><td style="padding:24px 32px 0;">
-          ${sectionLabel('Rentals')}
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-            ${itemRows}
-            <tr>
-              <td colspan="2" style="padding:12px 0 0;color:${COLORS.text};font-size:15px;font-weight:700;">Rental total</td>
-              <td style="padding:12px 0 0;color:${COLORS.primary};font-size:16px;font-weight:700;text-align:right;">${escapeHtml(money(booking.currency, booking.totalAmount))}</td>
-            </tr>
-          </table>
-        </td></tr>`
-    : '';
-
   const notesSection = booking.notes
     ? `
         <tr><td style="padding:24px 32px 0;">
           ${sectionLabel('Your notes')}
           <p style="margin:0;font-size:14px;color:${COLORS.text};line-height:1.5;">${escapeHtml(booking.notes)}</p>
+        </td></tr>`
+    : '';
+
+  const qrSection = qr
+    ? `
+        <tr><td align="center" style="padding:28px 32px 0;">
+          ${sectionLabel('Check-in code')}
+          <img src="cid:${QR_CID}" width="220" height="220" alt="Booking ${escapeHtml(ref)} QR code"
+               style="display:block;margin:12px auto 0;border:1px solid ${COLORS.border};border-radius:8px;padding:8px;background:#ffffff;" />
+          <p style="margin:10px 0 0;font-size:13px;line-height:1.5;color:${COLORS.muted};">
+            Show this QR code at the pro shop when you arrive.<br/>
+            Reference: <strong style="color:${COLORS.text};">${escapeHtml(ref)}</strong>
+          </p>
         </td></tr>`
     : '';
 
@@ -117,8 +169,8 @@ export function buildBookingConfirmationEmail(booking: Booking): BuiltEmail {
           </table>
         </td></tr>
 
-        ${rentalsSection}
         ${notesSection}
+        ${qrSection}
 
         <!-- Help -->
         <tr><td style="padding:28px 32px 32px;">
@@ -148,22 +200,26 @@ export function buildBookingConfirmationEmail(booking: Booking): BuiltEmail {
     `Date:     ${date}`,
     `Tee time: ${time}`,
     `Golfers:  ${booking.numberOfGolfers}`,
-    ...(items.length
-      ? [
-          '',
-          'Rentals:',
-          ...items.map(
-            (i) =>
-              `- ${itemName(i)} x ${i.quantity}  ${money(booking.currency, Number(i.unitPrice) * i.quantity)}`,
-          ),
-          `Rental total: ${money(booking.currency, booking.totalAmount)}`,
-        ]
-      : []),
     ...(booking.notes ? ['', `Notes: ${booking.notes}`] : []),
     '',
+    `Show booking reference ${ref} at the pro shop when you arrive.`,
     `Need to change or cancel? Contact ${SUPPORT_EMAIL}.`,
     'Please arrive 30 minutes before your tee time.',
   ].join('\n');
 
-  return { subject, html, text };
+  return {
+    subject,
+    html,
+    text,
+    attachments: qr
+      ? [
+          {
+            filename: 'booking-qr.png',
+            content: qr,
+            contentType: 'image/png',
+            contentId: QR_CID,
+          },
+        ]
+      : undefined,
+  };
 }
